@@ -32,7 +32,9 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "21"
+          # kyo's macros are compiled for Java 25 (class file v69). The Scala 3
+          # compiler loads them during inlining, so the compiler JVM must be 25+.
+          java-version: "25"
           cache: sbt
 
       - name: Set up sbt
