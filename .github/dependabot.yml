@@ -1,0 +1,20 @@
+# Dependabot configuration.
+#
+# sbt support (GA 2026-05-26) covers version updates only, not security updates.
+# It monitors build.sbt (kyo-* deps) and the sbt-scala-native plugin. GitHub
+# Actions used in workflows are kept current via the github-actions ecosystem.
+version: 2
+updates:
+  - package-ecosystem: sbt
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

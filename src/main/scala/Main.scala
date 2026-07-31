@@ -3,6 +3,7 @@ import kyo.schema.*
 
 case class ClientMetadata(
     @rename("client_name") clientName: String,
+    @rename("client_uri") clientUri: String,
     @rename("grant_types") grantTypes: List[String],
     @rename("response_types") responseTypes: List[String],
     @rename("token_endpoint_auth_method") tokenEndpointAuthMethod: String,
@@ -30,6 +31,7 @@ object Main extends KyoApp:
                     val path   = if redirectPath.isEmpty then "/" else redirectPath
                     HttpResponse.ok(ClientMetadata(
                         clientName = "cimdtest",
+                        clientUri = "https://www.cimd.now",
                         grantTypes = List("authorization_code", "refresh_token"),
                         responseTypes = List("code"),
                         tokenEndpointAuthMethod = "none",
@@ -42,9 +44,17 @@ object Main extends KyoApp:
             end match
         }
 
+    // Redirects the root path to the project's GitHub repository. Registered on the
+    // empty path (zero segments), so it matches exactly "/" while requests like
+    // "/8080/callback" still fall through to the clientMetadata Rest route.
+    private val rootRedirect =
+        HttpRoute.getRaw(HttpPath.empty).handler { _ =>
+            HttpResponse.redirect("https://github.com/jamesward/cimdapp")
+        }
+
     run {
         for
-            server <- HttpServer.init(HttpServerConfig.default.port(port).host("0.0.0.0"))(clientMetadata)
+            server <- HttpServer.init(HttpServerConfig.default.port(port).host("0.0.0.0"))(rootRedirect, clientMetadata)
             _      <- Console.printLine(s"Server running at http://localhost:${server.port}")
             _      <- server.await
         yield ()

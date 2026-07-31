@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Scala Native compiles bundled C (incl. kyo-http's kyo_tls.c, which needs
+      # OpenSSL headers) down to a native binary via clang. clang ships on the
+      # runner, but we install libssl-dev to provide <openssl/ssl.h> and libssl.
+      - name: Install Scala Native toolchain dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libssl-dev
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Compile
+        run: sbt compile
+
+      # Links the native executable end-to-end; this is what actually exercises
+      # the clang + OpenSSL toolchain, so it's the meaningful CI gate here.
+      - name: Link native binary
+        run: sbt nativeLink
