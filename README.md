@@ -15,22 +15,25 @@ returns a metadata document whose `client_id` is the request URL and whose
 This is handy for developing native/CLI OAuth clients against providers that
 support CIMD, without pre-registering a client.
 
-## Endpoints
+## Hosted service
 
-| Method & path            | Response                                                                 |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `GET /`                  | `302` redirect to <https://github.com/jamesward/cimdapp>                 |
-| `GET /:port`             | Client metadata JSON with `redirect_uris = [http://localhost::port/]`    |
-| `GET /:port/:path`       | Same, with `redirect_uris = [http://localhost::port/:path]`              |
+A public instance runs at **<https://www.cimd.now>** — you don't need to deploy
+anything to use it.
 
-The request `Host` and `X-Forwarded-Proto` headers determine the `client_id`
-(so it reflects the public URL when running behind a proxy). A non-numeric or
-out-of-range port yields `400 Bad Request`.
+Your client's `client_id` is simply the metadata URL that encodes the port (and
+optional path) your local client listens on:
 
-### Example
+```
+https://www.cimd.now/<port>            ->  redirect_uri http://localhost:<port>/
+https://www.cimd.now/<port>/<path>     ->  redirect_uri http://localhost:<port>/<path>
+```
+
+Hand that URL to your OAuth provider as the `client_id`. The provider fetches
+it, reads the metadata document below, and redirects back to your local client
+after authorization.
 
 ```console
-$ curl -s http://localhost:8080/9090/callback | jq
+$ curl -s https://www.cimd.now/8080/callback | jq
 {
   "client_name": "cimdtest",
   "client_uri": "https://www.cimd.now",
@@ -38,78 +41,24 @@ $ curl -s http://localhost:8080/9090/callback | jq
   "response_types": ["code"],
   "token_endpoint_auth_method": "none",
   "application_type": "native",
-  "client_id": "http://localhost:8080/9090/callback",
-  "redirect_uris": ["http://localhost:9090/callback"]
+  "client_id": "https://www.cimd.now/8080/callback",
+  "redirect_uris": ["http://localhost:8080/callback"]
 }
 ```
 
-## Tech stack
-
-- Scala 3.8.4 on Scala Native 0.5.12
-- kyo-core / kyo-http 1.0.0-RC5
-- sbt 2.0.4
-
-## Prerequisites
-
-Scala Native compiles to a native binary via **clang**, and `kyo-http` bundles a
-TLS shim (`kyo_tls.c`) that needs **OpenSSL** headers and libraries.
-
-- A JDK (25+, required by Kyo's macros) and sbt — the repo ships an `./sbt` launcher.
-- `clang`
-- OpenSSL development files:
-  - Debian/Ubuntu: `sudo apt-get install clang libssl-dev`
-  - macOS: `brew install llvm openssl`
-  - **NixOS**: use the provided `shell.nix` (see below)
-
-## Build and run
-
-```bash
-# Compile
-sbt compile
-
-# Produce the native binary
-sbt nativeLink
-
-# Run it (defaults to port 8080)
-./target/out/native0.5/scala-3.8.4/cimdtest/cimdtest
-
-# Or run directly through sbt
-sbt run
-```
-
-### Configuration
-
-| Variable | Default | Description                    |
-| -------- | ------- | ------------------------------ |
-| `PORT`   | `8080`  | Port to bind on (`0.0.0.0`).   |
-
-## NixOS
-
-There is no `/usr/include` on NixOS, so the OpenSSL headers must be provided
-through Nix. A `shell.nix` is included that puts OpenSSL on the compiler's
-search path and disables the `fortify` hardening flag (which is noisy in debug
-builds). Build from inside it:
-
-```bash
-nix-shell --run "sbt nativeLink"
-```
-
-Note: `sbt` runs a persistent server. If you switch build environments, shut it
-down (or kill stray `sbt`/`sbtn` processes) before rebuilding so the native
-toolchain is picked up from the current shell.
-
-## CI and dependencies
-
-- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — on push/PR to `main`,
-  installs the native toolchain, then runs `sbt compile` and `sbt nativeLink`.
-- [`.github/dependabot.yml`](.github/dependabot.yml) — weekly version-update PRs
-  for the `sbt` and `github-actions` ecosystems.
-
-## Project layout
+For example, a CLI client listening on `localhost:8080/callback` would start
+authorization with:
 
 ```
-src/main/scala/Main.scala   # server: routes + ClientMetadata model
-build.sbt                   # deps, Scala Native linking options
-shell.nix                   # NixOS dev shell (clang + OpenSSL)
-.github/                    # CI workflow + Dependabot config
+client_id=https://www.cimd.now/8080/callback
+redirect_uri=http://localhost:8080/callback
 ```
+
+Everything below is for running your own instance.
+
+## Endpoints
+
+| Method & path            | Response                                                                 |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `GET /:port`             | Client metadata JSON with `redirect_uris = [http://localhost::port/]`    |
+| `GET /:port/:path`       | Same, with `redirect_uris = [http://localhost::port/:path]`              |
