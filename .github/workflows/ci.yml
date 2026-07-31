@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Scala Native compiles bundled C (incl. kyo-http's kyo_tls.c, which needs
       # OpenSSL headers) down to a native binary via clang. clang ships on the
