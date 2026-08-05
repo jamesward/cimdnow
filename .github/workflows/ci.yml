@@ -20,13 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Scala Native compiles bundled C (incl. kyo-http's kyo_tls.c, which needs
-      # OpenSSL headers) down to a native binary via clang. clang ships on the
-      # runner, but we install libssl-dev to provide <openssl/ssl.h> and libssl.
+      # Scala Native compiles bundled C down to a native binary via clang:
+      #  - kyo-http's kyo_tls.c needs OpenSSL headers  -> libssl-dev
+      #  - kyo-net's kyo_uring.c needs liburing headers -> liburing-dev
+      # (clang ships on the runner.) Without liburing-dev, kyo_uring.c compiles
+      # to nothing and nativeLink fails with undefined kyo_uring_* references.
       - name: Install Scala Native toolchain dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang libssl-dev
+          sudo apt-get install -y clang libssl-dev liburing-dev
 
       - name: Set up JDK
         uses: actions/setup-java@v5.6.0
@@ -40,10 +42,17 @@ jobs:
       - name: Set up sbt
         uses: sbt/setup-sbt@v1.5.5
 
+      # No env vars needed: build.sbt detects the native toolchain. The
+      # apt-installed headers (/usr/include: liburing.h, openssl/ssl.h) make the
+      # root project a Scala Native app, so `compile` and `nativeLink` are
+      # unscoped. The apt-installed liburing.a (/usr/lib/x86_64-linux-gnu) is
+      # detected too, so liburing is statically linked.
       - name: Compile
         run: sbt compile
 
-      # Links the native executable end-to-end; this is what actually exercises
-      # the clang + OpenSSL toolchain, so it's the meaningful CI gate here.
+      # Links the native executable end-to-end — the meaningful CI gate. Mirrors
+      # the Heroku slug: liburing is statically linked (liburing.a detected) so the
+      # binary is self-contained, exactly as buildpack-scala-native builds it on
+      # heroku-24 (also Ubuntu 24.04).
       - name: Link native binary
         run: sbt nativeLink

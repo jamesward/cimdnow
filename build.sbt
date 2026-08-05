@@ -1,29 +1,33 @@
-enablePlugins(ScalaNativePlugin)
+// ReloadPlugin (sbt-reload) auto-activates on any JVM-enabled project. We keep
+// it for JVM dev (`sbt ~runReload`) and disable it in native mode below.
+import com.jamesward.sbtreload.ReloadPlugin
 
-name         := "cimdtest"
-scalaVersion := "3.8.4"
+lazy val scala3     = "3.8.4"
+lazy val kyoVersion = "1.0.0-RC6"
+
+// This app builds from ONE source tree as EITHER a Scala Native binary OR a JVM
+// app, chosen purely by detection (see NativeLinking.nativeEnabled — true when
+// the native headers are present, i.e. on Heroku or in the nix dev shell).
+// build.sbt only decides whether to ENABLE ScalaNativePlugin; the native link
+// options live in project/NativeLinking.scala (an AutoPlugin that requires
+// ScalaNativePlugin), so `nativeConfig` is set only when the plugin is enabled.
+enablePlugins((if (NativeLinking.nativeEnabled) Seq[AutoPlugin](ScalaNativePlugin) else Nil)*)
+disablePlugins((if (NativeLinking.nativeEnabled) Seq[AutoPlugin](ReloadPlugin) else Nil)*)
+
+name         := "cimdnow"
+scalaVersion := scala3
 
 libraryDependencies ++= Seq(
-    "io.getkyo" %% "kyo-core" % "1.0.0-RC5",
-    "io.getkyo" %% "kyo-http" % "1.0.0-RC5"
+  // `%%` resolves the right artifact automatically: kyo-core_native0.5_3 when
+  // ScalaNativePlugin is enabled, kyo-core_3 on the JVM.
+  "io.getkyo" %% "kyo-core" % kyoVersion,
+  "io.getkyo" %% "kyo-http" % kyoVersion,
 )
 
 // Required by Kyo: https://github.com/getkyo/kyo#getting-started
 scalacOptions ++= Seq(
-    "-Wvalue-discard",
-    "-Wnonunit-statement",
-    "-Wconf:msg=(unused.*value|discarded.*value|pure.*statement):error",
-    "-language:strictEquality"
+  "-Wvalue-discard",
+  "-Wnonunit-statement",
+  "-Wconf:msg=(unused.*value|discarded.*value|pure.*statement):error",
+  "-language:strictEquality"
 )
-
-// kyo-http bundles a TLS shim (native/kyo_tls.c) that's compiled unconditionally, even
-// though this app doesn't use TLS. Link against the system OpenSSL to satisfy it.
-//
-// -Wl,-z,noexecstack: Scala Native's hand-written asm (e.g. SafepointPollTrampoline)
-// lacks a .note.GNU-stack section, so GNU ld warns it may need an executable stack.
-// This flag forces a non-executable stack, silencing the warning and being safer.
-nativeConfig ~= { c =>
-    c.withLinkingOptions(
-        c.linkingOptions ++ Seq("-lssl", "-lcrypto", "-Wl,-z,noexecstack")
-    )
-}

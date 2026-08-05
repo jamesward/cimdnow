@@ -30,7 +30,7 @@ object Main extends KyoApp:
                     val domain = req.headers.get("Host").getOrElse(s"localhost:$port")
                     val path   = if redirectPath.isEmpty then "/" else redirectPath
                     HttpResponse.ok(ClientMetadata(
-                        clientName = "cimdtest",
+                        clientName = "cimdnow",
                         clientUri = "https://www.cimd.now",
                         grantTypes = List("authorization_code", "refresh_token"),
                         responseTypes = List("code"),
