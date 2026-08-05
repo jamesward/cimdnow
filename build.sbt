@@ -22,7 +22,14 @@ libraryDependencies ++= Seq(
   // ScalaNativePlugin is enabled, kyo-core_3 on the JVM.
   "io.getkyo" %% "kyo-core" % kyoVersion,
   "io.getkyo" %% "kyo-http" % kyoVersion,
+  // kyo-test (both published for JVM + Native): the test DSL/assertions and the
+  // sbt test framework that discovers & runs kyo.test.Test suites.
+  "io.getkyo" %% "kyo-test-api"    % kyoVersion % Test,
+  "io.getkyo" %% "kyo-test-runner" % kyoVersion % Test,
 )
+
+// kyo-test's suites are run by its own sbt Framework (not JUnit/munit).
+testFrameworks += new TestFramework("kyo.test.runner.SbtFramework")
 
 // Required by Kyo: https://github.com/getkyo/kyo#getting-started
 scalacOptions ++= Seq(

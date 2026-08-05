@@ -17,7 +17,7 @@ object Main extends KyoApp:
     private val port = sys.env.get("PORT").flatMap(_.toIntOption).getOrElse(8080)
 
     // Matches /:port or /:port/:path, e.g. "8080" or "8080/callback".
-    private val clientMetadata =
+    val clientMetadata =
         HttpRoute.getRaw(HttpPath.Capture.Rest("rest")).response(_.bodyJson[ClientMetadata]).handler { req =>
             val rest = req.fields.rest
             val (portSegment, redirectPath) = rest.indexOf('/') match
@@ -47,14 +47,17 @@ object Main extends KyoApp:
     // Redirects the root path to the project's GitHub repository. Registered on the
     // empty path (zero segments), so it matches exactly "/" while requests like
     // "/8080/callback" still fall through to the clientMetadata Rest route.
-    private val rootRedirect =
+    val rootRedirect =
         HttpRoute.getRaw(HttpPath.empty).handler { _ =>
             HttpResponse.redirect("https://github.com/jamesward/cimdapp")
         }
 
+    // Exposed so tests can start a server with the exact same routes.
+    val routes = Seq(rootRedirect, clientMetadata)
+
     run {
         for
-            server <- HttpServer.init(HttpServerConfig.default.port(port).host("0.0.0.0"))(rootRedirect, clientMetadata)
+            server <- HttpServer.init(HttpServerConfig.default.port(port).host("0.0.0.0"))(routes*)
             _      <- Console.printLine(s"Server running at http://localhost:${server.port}")
             _      <- server.await
         yield ()
