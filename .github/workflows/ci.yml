@@ -40,7 +40,7 @@ jobs:
           cache: sbt
 
       - name: Set up sbt
-        uses: sbt/setup-sbt@v1.5.5
+        uses: sbt/setup-sbt@v1.5.7
 
       # No env vars needed: build.sbt detects the native toolchain. The
       # apt-installed headers (/usr/include: liburing.h, openssl/ssl.h) make the
