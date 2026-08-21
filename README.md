@@ -28,6 +28,18 @@ https://www.cimd.now/<port>            ->  redirect_uri http://localhost:<port>/
 https://www.cimd.now/<port>/<path>     ->  redirect_uri http://localhost:<port>/<path>
 ```
 
+By default the redirect host is `localhost`. If your client binds to a loopback
+IP literal instead — as RFC 8252 §7.3/§8.3 recommends for native apps — prefix
+the port with the host:
+
+```
+https://www.cimd.now/127.0.0.1:<port>/<path>  ->  redirect_uri http://127.0.0.1:<port>/<path>
+https://www.cimd.now/[::1]:<port>/<path>      ->  redirect_uri http://[::1]:<port>/<path>
+```
+
+Only the loopback hosts `localhost`, `127.0.0.1`, and `[::1]` are accepted; any
+other host returns `400`.
+
 Hand that URL to your OAuth provider as the `client_id`. The provider fetches
 it, reads the metadata document below, and redirects back to your local client
 after authorization.
@@ -62,3 +74,4 @@ Everything below is for running your own instance.
 | ------------------------ | ------------------------------------------------------------------------ |
 | `GET /:port`             | Client metadata JSON with `redirect_uris = [http://localhost::port/]`    |
 | `GET /:port/:path`       | Same, with `redirect_uris = [http://localhost::port/:path]`              |
+| `GET /:host::port/:path` | Same, with `:host` in `redirect_uris`; `:host` must be a loopback host   |

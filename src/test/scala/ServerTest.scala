@@ -43,6 +43,64 @@ class ServerTest extends Test[Any]:
                 assert(md.redirectUris == List("http://localhost:9000/"))
         }
 
+        "GET /127.0.0.1:port/:path uses the IPv4 loopback literal in redirect_uri" in {
+            for
+                server <- HttpServer.init(serverConfig)(Main.routes*)
+                client <- HttpClient.init()
+                md <- HttpClient.let(client)(
+                    HttpClient.getJson[ClientMetadata](
+                        s"http://localhost:${server.port}/127.0.0.1:8080/callback",
+                        headers = Seq("Host" -> "www.cimd.now")
+                    )
+                )
+            yield
+                assert(md.clientId == "http://www.cimd.now/127.0.0.1:8080/callback")
+                assert(md.redirectUris == List("http://127.0.0.1:8080/callback"))
+        }
+
+        "GET /[::1]:port/:path uses the IPv6 loopback literal in redirect_uri" in {
+            for
+                server <- HttpServer.init(serverConfig)(Main.routes*)
+                client <- HttpClient.init()
+                md <- HttpClient.let(client)(
+                    HttpClient.getJson[ClientMetadata](
+                        s"http://localhost:${server.port}/[::1]:8080/callback",
+                        headers = Seq("Host" -> "www.cimd.now")
+                    )
+                )
+            yield
+                assert(md.clientId == "http://www.cimd.now/[::1]:8080/callback")
+                assert(md.redirectUris == List("http://[::1]:8080/callback"))
+        }
+
+        "GET /localhost:port/:path is accepted explicitly" in {
+            for
+                server <- HttpServer.init(serverConfig)(Main.routes*)
+                client <- HttpClient.init()
+                md <- HttpClient.let(client)(
+                    HttpClient.getJson[ClientMetadata](
+                        s"http://localhost:${server.port}/localhost:8080/callback",
+                        headers = Seq("Host" -> "www.cimd.now")
+                    )
+                )
+            yield
+                assert(md.redirectUris == List("http://localhost:8080/callback"))
+        }
+
+        "GET /:host:port with a non-loopback host returns 400" in {
+            for
+                server <- HttpServer.init(serverConfig)(Main.routes*)
+                client <- HttpClient.init()
+                resp <- HttpClient.let(client)(
+                    HttpClient.getTextResponse(
+                        s"http://localhost:${server.port}/evil.example.com:8080/callback",
+                        failOnError = false
+                    )
+                )
+            yield
+                assert(resp.status.code == 400)
+        }
+
         "GET /:port with a non-numeric port segment returns 400" in {
             for
                 server <- HttpServer.init(serverConfig)(Main.routes*)
