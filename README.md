@@ -1,4 +1,4 @@
-# cimdtest
+# cimdnow
 
 A tiny [Scala Native](https://scala-native.org/) HTTP server that generates
 **OAuth Client ID Metadata Documents (CIMD)** on the fly, built with
