@@ -2,8 +2,8 @@
 // it for JVM dev (`sbt ~runReload`) and disable it in native mode below.
 import com.jamesward.sbtreload.ReloadPlugin
 
-lazy val scala3     = "3.8.4"
-lazy val kyoVersion = "1.0.0-RC6"
+lazy val scala3     = "3.9.0"
+lazy val kyoVersion = "1.0.0-RC7"
 
 // This app builds from ONE source tree as EITHER a Scala Native binary OR a JVM
 // app, chosen purely by detection (see NativeLinking.nativeEnabled — true when
