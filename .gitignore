@@ -8,3 +8,6 @@ project/project/
 *.class
 *.log
 /.idea/
+
+# Agent Skills extracted by the build
+/.kiro/skills/
